@@ -19,6 +19,7 @@ from typing import List, Tuple
 from midi_loader import load_dataset
 from markov_chain import MarkovChain
 from midi_generator import sequence_to_midi, sequences_to_midi
+from playback import playback_midi
 
 
 def train_test_split(sequences: List[List], test_ratio: float = 0.2, 
@@ -235,6 +236,7 @@ def main():
         )
         sequence_to_midi(generated, output_path)
         print(f"  Generated sample {i+1}: {len(generated)} states -> {output_path}")
+        playback_midi(output_path)
     
     # Save model
     model_path = os.path.join(args.output_dir, f"model_order{args.order}.pkl")

@@ -271,7 +271,9 @@ class MarkovChain:
                     probabilities = probabilities / probabilities.sum()
                 
                 # Sample from the distribution
-                next_state = np.random.choice(next_states, p=probabilities)
+                # Use index-based sampling to handle tuples correctly
+                idx = np.random.choice(len(next_states), p=probabilities)
+                next_state = next_states[idx]
             
             generated.append(next_state)
             
