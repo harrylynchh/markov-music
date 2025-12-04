@@ -11,8 +11,8 @@ Key Dependencies:
 
 import pickle
 import numpy as np
-from collections import defaultdict, Counter
-from typing import List, Tuple, Optional, Dict, Any
+from collections import defaultdict
+from typing import List, Tuple, Optional
 
 
 class MarkovChain:

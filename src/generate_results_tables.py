@@ -7,10 +7,8 @@ formatted tables for the paper's results section.
 """
 
 import os
-import re
 
-from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 def parse_experiment_output(output_dir: str) -> Dict[str, float]:
     """
