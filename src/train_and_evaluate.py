@@ -12,15 +12,14 @@ Usage:
     python train_and_evaluate.py --dataset nottingham --order 1 --max_files 100
 """
 
-import argparse
 import os
+import argparse
 import numpy as np
 from typing import List, Tuple
+
 from midi_loader import load_dataset
 from markov_chain import MarkovChain
 from midi_generator import sequence_to_midi
-from playback import playback_midi
-
 
 def train_test_split(sequences: List[List], test_ratio: float = 0.2, 
                      random_seed: int = 42) -> Tuple[List[List], List[List]]:
@@ -38,14 +37,8 @@ def train_test_split(sequences: List[List], test_ratio: float = 0.2,
     
     Returns:
     --------
-    Tuple[List[List], List[List]]
         (train_sequences, val_sequences)
     
-    Explanation:
-    ------------
-    We split at the sequence level (not the state level) to ensure
-    that pieces in the validation set are completely unseen during training.
-    This gives us a fair evaluation of generalization.
     """
     np.random.seed(random_seed)
     
@@ -75,15 +68,7 @@ def evaluate_model(model: MarkovChain, val_sequences: List[List]) -> dict:
     
     Returns:
     --------
-    dict
         Dictionary of evaluation metrics
-    
-    Explanation:
-    ------------
-    Calculates several metrics:
-    - NLL: Negative Log-Likelihood (lower is better)
-    - Average sequence log-likelihood
-    - Coverage: percentage of validation states seen during training
     """
     print("\nEvaluating model on validation set...")
     
@@ -158,7 +143,7 @@ def main():
                        help='Proportion of data for validation')
     parser.add_argument('--generate_samples', type=int, default=5,
                        help='Number of sample pieces to generate')
-    parser.add_argument('--output_dir', type=str, default='output',
+    parser.add_argument('--output_dir', type=str, default='../output',
                        help='Directory for generated MIDI files')
     
     args = parser.parse_args()
@@ -166,10 +151,10 @@ def main():
     # Determine dataset path
     if args.dataset == 'nottingham':
         data_dir = "data/nottingham_github/MIDI"
-        track_name = None  # Use first track
+        track_name = None
     elif args.dataset == 'pop909':
         data_dir = "data/pop909/POP909"
-        track_name = "MELODY"  # POP909 has labeled tracks
+        track_name = "MELODY"
     else:
         raise ValueError(f"Unknown dataset: {args.dataset}")
     
@@ -182,7 +167,6 @@ def main():
     print(f"Max Files: {args.max_files or 'All'}")
     print("="*60)
     
-    # Step 1: Load dataset
     print("\n[Step 1] Loading dataset...")
     sequences = load_dataset(
         data_dir=data_dir,
@@ -198,7 +182,6 @@ def main():
     print(f"Loaded {len(sequences)} sequences")
     print(f"Average sequence length: {np.mean([len(s) for s in sequences]):.1f} states")
     
-    # Step 2: Split into train/validation
     print("\n[Step 2] Splitting into train/validation sets...")
     train_sequences, val_sequences = train_test_split(
         sequences, 
@@ -208,17 +191,14 @@ def main():
     print(f"Training sequences: {len(train_sequences)}")
     print(f"Validation sequences: {len(val_sequences)}")
     
-    # Step 3: Train model
     print(f"\n[Step 3] Training {args.order}-order Markov chain...")
     model = MarkovChain(order=args.order)
     model.train(train_sequences)
     
-    # Step 4: Evaluate model
     print("\n[Step 4] Evaluating model...")
     metrics = evaluate_model(model, val_sequences)
     print_metrics(metrics, f"{args.order}-order Markov Chain")
     
-    # Step 5: Generate sample music
     print(f"\n[Step 5] Generating {args.generate_samples} sample pieces...")
     os.makedirs(args.output_dir, exist_ok=True)
     
@@ -236,7 +216,6 @@ def main():
         )
         sequence_to_midi(generated, output_path)
         print(f"  Generated sample {i+1}: {len(generated)} states -> {output_path}")
-        playback_midi(output_path)
     
     # Save model
     model_path = os.path.join(args.output_dir, f"model_order{args.order}.pkl")

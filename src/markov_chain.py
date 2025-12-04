@@ -5,24 +5,24 @@ This module implements a Markov chain that can model musical sequences.
 It supports both first-order (next state depends only on current state) and
 higher-order (next state depends on multiple previous states) Markov chains.
 
-Key Classes:
+Key Dependencies:
 - MarkovChain: Main class for training and generating music
 """
 
+import pickle
 import numpy as np
 from collections import defaultdict, Counter
 from typing import List, Tuple, Optional, Dict, Any
-import pickle
 
 
 class MarkovChain:
     """
     A Markov chain model for generating musical sequences.
     
-    This class can learn transition probabilities from training data and
+    learns transition probabilities from training data and
     generate new sequences based on those probabilities.
     
-    Attributes:
+    Members:
     -----------
     order : int
         The order of the Markov chain (1 = first-order, 2 = second-order, etc.)
@@ -30,6 +30,8 @@ class MarkovChain:
         Dictionary mapping state sequences to probability distributions
     state_counts : dict
         Dictionary counting occurrences of each state sequence
+    all_states: set
+        Set containing the states we've seen so far
     """
     
     def __init__(self, order: int = 1):
@@ -43,17 +45,11 @@ class MarkovChain:
             - order=1: First-order (next state depends only on current state)
             - order=2: Second-order (next state depends on previous 2 states)
             - order=N: N-th order (next state depends on previous N states)
-        
-        Explanation:
-        ------------
-        The order determines how much "memory" the Markov chain has.
-        Higher order models can capture longer-term patterns but require
-        more training data and have more parameters.
         """
         self.order = order
         self.transition_matrix = defaultdict(lambda: defaultdict(int))
         self.state_counts = defaultdict(int)
-        self.all_states = set()  # Track all unique states we've seen
+        self.all_states = set()
     
     def _get_state_sequence(self, sequence: List, index: int) -> Tuple:
         """
@@ -68,14 +64,8 @@ class MarkovChain:
         
         Returns:
         --------
-        Tuple
             The state sequence (context) of length 'order'
         
-        Explanation:
-        ------------
-        For a first-order chain (order=1), this returns just the current state.
-        For a second-order chain (order=2), this returns (state[i-1], state[i]).
-        This tuple serves as the "key" in our transition matrix.
         """
         # Get the previous 'order' states
         start_idx = max(0, index - self.order)
@@ -97,15 +87,6 @@ class MarkovChain:
             List of training sequences. Each sequence is a list of states
             (e.g., [(pitch, duration), ...] or [pitch, ...])
         
-        Explanation:
-        ------------
-        This function:
-        1. Iterates through all training sequences
-        2. For each position, extracts the context (previous N states)
-        3. Counts how often each next state follows each context
-        4. Builds a transition matrix with these counts
-        
-        After training, we can convert counts to probabilities for generation.
         """
         print(f"Training {self.order}-order Markov chain on {len(sequences)} sequences...")
         
@@ -118,8 +99,8 @@ class MarkovChain:
         
         # Process each sequence
         for seq_idx, sequence in enumerate(sequences):
+            # Skip sequences that are too short
             if len(sequence) < self.order + 1:
-                # Skip sequences that are too short
                 continue
             
             # Track all states we see
@@ -128,10 +109,8 @@ class MarkovChain:
             
             # Build transition counts
             for i in range(self.order, len(sequence)):
-                # Get the context (previous N states)
                 context = self._get_state_sequence(sequence, i)
                 
-                # Get the next state
                 next_state = sequence[i]
                 
                 # Increment the count for this transition
@@ -156,12 +135,6 @@ class MarkovChain:
         --------
         Tuple[List, List]
             (possible_next_states, probabilities) where probabilities sum to 1.0
-        
-        Explanation:
-        ------------
-        This converts the raw counts in our transition matrix into probabilities.
-        If we've seen context (C, D) 10 times, and 7 times it was followed by E
-        and 3 times by F, then P(E|C,D) = 0.7 and P(F|C,D) = 0.3.
         """
         if context not in self.transition_matrix:
             # If we've never seen this context, return uniform distribution
@@ -172,7 +145,6 @@ class MarkovChain:
             probs = [1.0 / len(states)] * len(states)
             return states, probs
         
-        # Get counts for this context
         next_state_counts = self.transition_matrix[context]
         total_count = self.state_counts[context]
         
@@ -192,7 +164,7 @@ class MarkovChain:
             states.append(state)
             probs.append(count / total_count)
         
-        # Normalize to ensure they sum to 1.0 (handles floating point errors)
+        # Normalize
         total_prob = sum(probs)
         if total_prob > 0:
             probs = [p / total_prob for p in probs]
@@ -218,29 +190,12 @@ class MarkovChain:
         --------
         List
             Generated sequence of states
-        
-        Explanation:
-        ------------
-        Generation process:
-        1. Start with an initial context (or random one from training)
-        2. For each step:
-           a. Look up probability distribution for next state given current context
-           b. Sample from this distribution (using temperature to control randomness)
-           c. Add the sampled state to the sequence
-           d. Update context by shifting and adding the new state
-        3. Repeat until we've generated 'length' states
-        
-        Temperature parameter:
-        - temperature = 1.0: Use probabilities as-is
-        - temperature > 1.0: Flatten probabilities (more exploration)
-        - temperature < 1.0: Sharpen probabilities (more exploitation)
         """
         if not self.transition_matrix:
             raise ValueError("Model not trained yet. Call train() first.")
         
         generated = []
         
-        # Initialize context
         if start_context is None:
             # Randomly select a context that we've seen during training
             available_contexts = list(self.transition_matrix.keys())
@@ -277,7 +232,7 @@ class MarkovChain:
             
             generated.append(next_state)
             
-            # Update context: shift and add new state
+            # shift and add new state
             if self.order > 0:
                 context = context[1:] + (next_state,)
             else:
@@ -298,17 +253,6 @@ class MarkovChain:
         --------
         float
             Log-likelihood of the sequence (higher is better)
-        
-        Explanation:
-        ------------
-        Log-likelihood measures how well the model predicts the sequence.
-        For each position, we calculate P(next_state | context) and take the log.
-        We sum all these log probabilities to get the total log-likelihood.
-        
-        This is useful for:
-        - Evaluating model quality on validation data
-        - Comparing different models (higher log-likelihood = better fit)
-        - Calculating Negative Log-Likelihood (NLL) for evaluation metrics
         """
         if len(sequence) < self.order + 1:
             return float('-inf')
@@ -328,7 +272,7 @@ class MarkovChain:
                 # Add log probability (use small epsilon to avoid log(0))
                 log_likelihood += np.log(prob + 1e-10)
             else:
-                # State never seen in this context - very unlikely
+                # State never seen in this context
                 log_likelihood += np.log(1e-10)
         
         return log_likelihood
@@ -346,15 +290,6 @@ class MarkovChain:
         --------
         float
             Average NLL (lower is better)
-        
-        Explanation:
-        ------------
-        NLL is a common metric for evaluating generative models. It measures
-        how surprised the model is by the data. Lower NLL means the model
-        predicts the data better.
-        
-        NLL = -1/N * sum(log P(sequence))
-        where N is the number of sequences.
         """
         total_log_likelihood = 0.0
         valid_sequences = 0

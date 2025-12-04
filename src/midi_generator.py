@@ -31,23 +31,8 @@ def sequence_to_midi(sequence: List[Union[int, Tuple]],
     
     Returns:
     --------
-    None
         Saves a MIDI file to output_path
-    
-    Explanation:
-    ------------
-    This function:
-    1. Creates a music21 Stream (the container for musical elements)
-    2. Sets tempo and time signature
-    3. For each state in the sequence:
-       - If it's a tuple (pitch, duration), uses that duration
-       - If it's just a pitch, uses a default duration (quarter note)
-       - Creates a Note object and adds it to the stream
-    4. Writes the stream to a MIDI file
-    
-    The resulting MIDI file can be played in any music player or DAW.
     """
-    # Create a new stream
     score = stream.Stream()
     
     # Set tempo
@@ -56,22 +41,18 @@ def sequence_to_midi(sequence: List[Union[int, Tuple]],
     # Set time signature
     score.append(meter.TimeSignature(time_signature))
     
-    # Track current time position
     current_time = 0.0
     
     # Process each state in the sequence
     for state in sequence:
         if isinstance(state, tuple):
-            # State is (pitch, duration)
             pitch, duration = state
         else:
-            # State is just a pitch (int)
             pitch = state
             duration = 1.0  # Default to quarter note
         
         # Create a note
         # MIDI pitch 60 = C4 (middle C)
-        # We need to ensure pitch is in valid range (0-127)
         if isinstance(pitch, (int, float)):
             pitch = int(pitch)
             if 0 <= pitch <= 127:
@@ -80,7 +61,6 @@ def sequence_to_midi(sequence: List[Union[int, Tuple]],
                 n.offset = current_time
                 score.append(n)
                 
-                # Move forward in time
                 current_time += duration
         else:
             # Skip invalid pitches

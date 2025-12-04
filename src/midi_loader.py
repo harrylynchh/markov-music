@@ -5,17 +5,13 @@ This module handles loading and preprocessing MIDI files from various datasets.
 It extracts musical information (pitches, rhythms, durations) that can be used
 to train Markov chain models.
 
-Key Functions:
-- load_midi_files(): Scans directories for MIDI files
-- extract_notes_from_midi(): Extracts note sequences from a single MIDI file
-- preprocess_sequences(): Converts raw MIDI data into sequences suitable for training
 """
 
 import os
 import glob
+import numpy as np
 from typing import List, Tuple, Optional
 from music21 import converter, stream, note, chord, instrument
-import numpy as np
 
 
 def load_midi_files(data_dir: str, max_files: Optional[int] = None) -> List[str]:
@@ -33,20 +29,12 @@ def load_midi_files(data_dir: str, max_files: Optional[int] = None) -> List[str]
     --------
     List[str]
         List of file paths to MIDI files
-    
-    Explanation:
-    ------------
-    This function walks through the directory tree and collects all .mid files.
-    It's useful for loading datasets like Nottingham or POP909 that have many
-    MIDI files organized in subdirectories.
     """
     midi_files = []
     
-    # Use glob to recursively find all .mid files
     pattern = os.path.join(data_dir, "**", "*.mid")
     all_files = glob.glob(pattern, recursive=True)
     
-    # Limit the number if specified (useful for testing)
     if max_files:
         all_files = all_files[:max_files]
     
@@ -78,17 +66,6 @@ def extract_notes_from_midi(midi_path: str,
         - pitch: MIDI note number (0-127)
         - start_time: Start time in beats
         - duration: Duration in beats
-    
-    Explanation:
-    ------------
-    This function:
-    1. Loads the MIDI file using music21
-    2. Extracts notes from the specified track (or first track if not specified)
-    3. Converts each note to (pitch, start_time, duration)
-    4. Optionally quantizes durations to musical values (quarter, eighth, etc.)
-    
-    The output format is perfect for Markov chain training because we can
-    model transitions between (pitch, duration) pairs.
     """
     try:
         # Load the MIDI file
@@ -97,7 +74,6 @@ def extract_notes_from_midi(midi_path: str,
         # Find the appropriate part/track
         parts = score.parts if hasattr(score, 'parts') else [score]
         
-        # If track_name is specified, find that track
         if track_name:
             for part in parts:
                 if track_name in str(part.partName):
@@ -117,9 +93,9 @@ def extract_notes_from_midi(midi_path: str,
         for element in selected_part.flat.notes:
             if isinstance(element, note.Note):
                 # Single note
-                pitch = element.pitch.midi  # Convert to MIDI number (0-127)
-                start = float(element.offset)  # Start time in beats
-                dur = float(element.duration.quarterLength)  # Duration in beats
+                pitch = element.pitch.midi
+                start = float(element.offset)
+                dur = float(element.duration.quarterLength)
                 
                 # Quantize duration to common musical values
                 if quantize:
@@ -158,7 +134,6 @@ def quantize_duration(duration: float) -> float:
     
     Returns:
     --------
-    float
         Quantized duration (0.25, 0.5, 0.75, 1.0, 1.5, 2.0, etc.)
     
     Explanation:
@@ -191,16 +166,8 @@ def preprocess_sequences(notes_data: List[Tuple[int, float, float]],
     
     Returns:
     --------
-    List[Tuple]
         List of states. If include_rhythm=True: (pitch, duration) tuples
         If include_rhythm=False: just pitch integers
-    
-    Explanation:
-    ------------
-    This function converts the temporal note data into a sequence of states.
-    Each state represents a musical event. By including rhythm, we can model
-    both melodic and rhythmic patterns, which is more musically interesting
-    than pitch alone.
     """
     if not notes_data:
         return []
@@ -238,20 +205,9 @@ def load_dataset(data_dir: str,
     
     Returns:
     --------
-    List[List[Tuple]]
         List of sequences, where each sequence is a list of states
         (one sequence per MIDI file)
     
-    Explanation:
-    ------------
-    This is the main function you'll use to load a dataset. It:
-    1. Finds all MIDI files in the directory
-    2. Extracts notes from each file
-    3. Converts them to state sequences
-    4. Returns all sequences ready for training
-    
-    Each sequence represents one piece of music, and we can train
-    the Markov chain on all sequences together.
     """
     print(f"Loading MIDI files from {data_dir}...")
     midi_files = load_midi_files(data_dir, max_files)

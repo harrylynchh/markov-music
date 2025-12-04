@@ -2,13 +2,13 @@
 Generate Results Tables from Experiment Outputs
 
 This script parses the output from train_and_evaluate.py and creates
-formatted tables for your paper's results section.
+formatted tables for the paper's results section.
 
-Run this after running all experiments to generate LaTeX/Markdown tables.
 """
 
 import os
 import re
+
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -16,10 +16,6 @@ def parse_experiment_output(output_dir: str) -> Dict[str, float]:
     """
     Parse experiment results from a directory.
     Looks for the printed metrics in the console output or saved files.
-    
-    For now, we'll create a template structure. You'll need to manually
-    fill in the values from your experiment outputs, or we can enhance
-    this to parse log files.
     """
     # Check if there's a model file (indicates experiment ran)
     model_file = None
@@ -45,7 +41,7 @@ def parse_experiment_output(output_dir: str) -> Dict[str, float]:
     elif "order5" in config:
         order = 5
     else:
-        order = 1  # default
+        order = 1
     has_rhythm = "with_rhythm" in config
     
     return {
@@ -158,8 +154,6 @@ def main():
         f.write(create_markdown_table(experiments))
     
     print("\nTables saved to results/results_tables.txt")
-    print("\nNOTE: Replace XXX.XX with actual values from your experiment outputs!")
-
 
 if __name__ == "__main__":
     main()
