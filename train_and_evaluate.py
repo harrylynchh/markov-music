@@ -18,7 +18,7 @@ import numpy as np
 from typing import List, Tuple
 from midi_loader import load_dataset
 from markov_chain import MarkovChain
-from midi_generator import sequence_to_midi, sequences_to_midi
+from midi_generator import sequence_to_midi
 from playback import playback_midi
 
 
