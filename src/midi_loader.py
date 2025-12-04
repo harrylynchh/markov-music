@@ -11,7 +11,7 @@ import os
 import glob
 import numpy as np
 from typing import List, Tuple, Optional
-from music21 import converter, stream, note, chord, instrument
+from music21 import converter, note, chord
 
 
 def load_midi_files(data_dir: str, max_files: Optional[int] = None) -> List[str]:
